@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import type { Course, VideoNote } from '@/types';
 import { STARTER_COURSES } from './starterCourses';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+const DATA_DIR = process.env.VERCEL ? path.join('/tmp', 'data') : path.join(process.cwd(), 'data');
 const USERS_COURSES_DIR = path.join(DATA_DIR, 'users_courses');
 const GLOBAL_DATA_FILE = path.join(DATA_DIR, 'courses.json');
 
