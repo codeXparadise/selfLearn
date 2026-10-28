@@ -201,7 +201,7 @@ selfLearn/
 │   │   └── Logo.tsx         # Unified SVG/PNG brand emblem
 │   ├── context/             # AuthContext & ThemeContext
 │   └── lib/                 # Firebase client & database utilities
-├── data/                    # Seed courses & local storage
+├── vercel.json              # Vercel deployment & security headers config
 ├── LICENSE                  # MIT License + REA Tool Ban
 ├── CODE_OF_CONDUCT.md       # Contributor Covenant v2.1
 └── COPYRIGHT.md             # Intellectual property & Reverse Engineering notice
