@@ -618,7 +618,10 @@ export default function ClassroomPage() {
           <div className="w-full max-w-5xl mx-auto space-y-3 sm:space-y-4">
             
             {/* Centered Single Video Player Card */}
-            <div className="w-full rounded-2xl md:rounded-3xl overflow-hidden shadow-lg border border-neutral-200/80 dark:border-neutral-800 bg-black">
+            <div 
+              style={{ isolation: 'isolate', transform: 'translate3d(0, 0, 0)' }}
+              className="w-full rounded-2xl md:rounded-3xl overflow-hidden shadow-lg border border-neutral-200/80 dark:border-neutral-800 bg-black"
+            >
               <VideoPlayer
                 video={activeVideo}
                 courseVideos={course.videos}

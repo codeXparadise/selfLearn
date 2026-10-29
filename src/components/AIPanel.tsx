@@ -50,6 +50,7 @@ export function AIPanel({
   const [selectedModel, setSelectedModel] = useState(user?.ollamaModel || 'gemma4:31b');
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [showKeyInput, setShowKeyInput] = useState(false);
+  const [syncScope, setSyncScope] = useState<'timestamp' | 'entire'>('timestamp');
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -154,6 +155,8 @@ export function AIPanel({
         timestampFormatted: formatSec(currentTime),
         durationFormatted: formatSec(duration),
         courseDescription: course?.description || '',
+        videoDescription: activeVideo?.description || '',
+        syllabus: course?.videos?.map((v) => v.title).slice(0, 15) || [],
       };
 
       const res = await fetch('/api/ai/chat', {
@@ -162,6 +165,7 @@ export function AIPanel({
         body: JSON.stringify({
           apiKey,
           model: selectedModel,
+          scope: syncScope,
           videoContext,
           messages: messages
             .filter((m) => m.id !== 'init')
@@ -383,13 +387,31 @@ export function AIPanel({
               </div>
             </div>
 
-            {/* Real-time usage bar */}
-            <div className="flex items-center justify-between text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">
-              <span className="flex items-center gap-1">
+            {/* Real-time usage & Scope toggle bar */}
+            <div className="flex items-center justify-between text-[10px] text-neutral-500 dark:text-neutral-400 font-medium pt-0.5">
+              <button
+                type="button"
+                onClick={() => setSyncScope((prev) => (prev === 'timestamp' ? 'entire' : 'timestamp'))}
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/40 dark:bg-white/10 hover:bg-white/60 dark:hover:bg-white/20 border border-white/40 dark:border-white/15 text-neutral-800 dark:text-neutral-200 transition-colors"
+                title="Click to toggle between Timestamp Sync and Full Video / General Mode"
+              >
+                {syncScope === 'timestamp' ? (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="font-mono text-[#EA4335] font-semibold">⏱️ Synced at {formatSec(currentTime)}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    <span className="text-blue-600 dark:text-blue-400 font-semibold">🌐 Full Video / General</span>
+                  </>
+                )}
+              </button>
+
+              <span className="font-mono flex items-center gap-1">
                 <Activity className="w-3 h-3 text-[#EA4335]" />
-                <span>Usage</span>
+                <span>{usageCount} / {maxDailyQueries} queries</span>
               </span>
-              <span className="font-mono">{usageCount} / {maxDailyQueries} queries</span>
             </div>
           </div>
 
@@ -531,17 +553,43 @@ export function AIPanel({
               <div className="px-3 pt-2 flex items-center gap-1.5 overflow-x-auto text-[11px] shrink-0 pb-1" data-lenis-prevent>
                 <button
                   type="button"
-                  onClick={() => handleSendPrompt(`Explain what is being taught at ${formatSec(currentTime)}`)}
-                  className="px-2.5 py-1 rounded-full bg-white/35 dark:bg-white/5 hover:bg-white/55 dark:hover:bg-white/15 backdrop-blur-xs border border-white/30 dark:border-white/10 text-neutral-800 dark:text-neutral-200 transition-all whitespace-nowrap shrink-0 shadow-2xs"
+                  onClick={() => {
+                    setSyncScope('entire');
+                    handleSendPrompt("Summarize the entire video in short with key takeaways");
+                  }}
+                  className={`px-2.5 py-1 rounded-full backdrop-blur-xs border transition-all whitespace-nowrap shrink-0 shadow-2xs ${
+                    syncScope === 'entire'
+                      ? 'bg-[#EA4335]/20 border-[#EA4335]/40 text-[#EA4335] font-semibold'
+                      : 'bg-white/35 dark:bg-white/5 hover:bg-white/55 dark:hover:bg-white/15 border-white/30 dark:border-white/10 text-neutral-800 dark:text-neutral-200'
+                  }`}
+                  title="Summarize the full lesson irrespective of current timestamp"
                 >
-                  ⚡ Explain current topic
+                  📋 Summarize Entire Video
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleSendPrompt("Summarize the key takeaways of this video")}
+                  onClick={() => {
+                    setSyncScope('timestamp');
+                    handleSendPrompt(`Explain what is being taught at ${formatSec(currentTime)}`);
+                  }}
+                  className={`px-2.5 py-1 rounded-full backdrop-blur-xs border transition-all whitespace-nowrap shrink-0 shadow-2xs ${
+                    syncScope === 'timestamp'
+                      ? 'bg-[#EA4335]/20 border-[#EA4335]/40 text-[#EA4335] font-semibold'
+                      : 'bg-white/35 dark:bg-white/5 hover:bg-white/55 dark:hover:bg-white/15 border-white/30 dark:border-white/10 text-neutral-800 dark:text-neutral-200'
+                  }`}
+                  title="Explain the specific concept at current playback timestamp"
+                >
+                  ⚡ Explain at {formatSec(currentTime)}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSyncScope('entire');
+                    handleSendPrompt("What are the core concepts and code patterns covered in this lesson?");
+                  }}
                   className="px-2.5 py-1 rounded-full bg-white/35 dark:bg-white/5 hover:bg-white/55 dark:hover:bg-white/15 backdrop-blur-xs border border-white/30 dark:border-white/10 text-neutral-800 dark:text-neutral-200 transition-all whitespace-nowrap shrink-0 shadow-2xs"
                 >
-                  📝 Summarize video
+                  💡 Key Concepts
                 </button>
               </div>
 
@@ -550,7 +598,7 @@ export function AIPanel({
                 <div className="relative flex items-center">
                   <input
                     type="text"
-                    placeholder={`Ask about lesson at ${formatSec(currentTime)}...`}
+                    placeholder={syncScope === 'timestamp' ? `Ask about lesson at ${formatSec(currentTime)}...` : 'Ask general question or summarize entire lesson...'}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     disabled={loading}

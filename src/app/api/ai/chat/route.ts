@@ -3,28 +3,54 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { apiKey, hostUrl, model, messages, videoContext } = body;
+    const { apiKey, hostUrl, model, messages, videoContext, scope } = body;
     const targetHost = (hostUrl && hostUrl.trim()) || 'https://ollama.com';
     const targetModel = (model && model.trim()) || 'gemma4:31b';
+
+    // Extract latest user message
+    const latestUserMsg = [...(messages || [])].reverse().find((m: any) => m.role === 'user')?.content || '';
+
+    // Check if the user is asking for a full-video summary, syllabus overview, or general concept
+    const isGeneralOrFullVideoQuery = 
+      scope === 'entire' ||
+      /summarize|summary|overview|entire|whole video|full video|all lessons|outline|syllabus|what is this video about|key takeaways|what is covered|general|in short|tldr|tl;dr/i.test(latestUserMsg);
+
+    const scopeDirective = isGeneralOrFullVideoQuery
+      ? `STUDENT INTENT: FULL-LESSON SUMMARY & GENERAL CONCEPTS
+The student asked: "${latestUserMsg}"
+CRITICAL INSTRUCTION:
+- This is a FULL-VIDEO or HIGH-LEVEL SUMMARY question. Do NOT constrain or restrict your response to the current video timestamp (${videoContext?.timestampFormatted || '00:00'}).
+- Provide an overarching, comprehensive summary of the ENTIRE lesson "${videoContext?.videoTitle || 'Active Lesson'}" and its core concepts.
+- Highlight the major learning objectives and key topics covered across the entire duration (${videoContext?.durationFormatted || 'full lesson'}).
+- Keep it concise, structured, and easy to read.`
+      : `STUDENT INTENT: TIMESTAMP-SPECIFIC INQUIRY
+The student is currently at timestamp ${videoContext?.timestampFormatted || '00:00'} (${videoContext?.currentTimeSeconds || 0}s).
+- Focus your explanation primarily on what is being taught, demonstrated, or coded around this timestamp.
+- If referencing other moments, write timestamps in [mm:ss] format (e.g., [02:30]) so the student can seek directly.`;
 
     const systemPrompt = `You are a concise, helpful AI personal coding tutor inside "Self Learn" (distraction-free YouTube learning classroom).
 The student is watching a course and asking questions about the material or specific video timestamps.
 
-CURRENT VIDEO CONTEXT:
-- Course: "${videoContext?.courseTitle || 'Untitled Course'}"
-- Channel: "${videoContext?.channelTitle || 'Course Instructor'}"
-- Lesson: "${videoContext?.videoTitle || 'Active Lesson'}"
-- Current Video Time: ${videoContext?.timestampFormatted || '00:00'} (${videoContext?.currentTimeSeconds || 0}s)
-- Total Duration: ${videoContext?.durationFormatted || 'Unknown'} (${videoContext?.durationSeconds || 0}s)
-${videoContext?.courseDescription ? `- Course Overview: ${videoContext.courseDescription.slice(0, 300)}` : ''}
+CURRENT VIDEO & LESSON CONTEXT:
+- Course Title: "${videoContext?.courseTitle || 'Untitled Course'}"
+- Instructor / Channel: "${videoContext?.channelTitle || 'Course Instructor'}"
+- Active Lesson: "${videoContext?.videoTitle || 'Active Lesson'}"
+- Current Playback Time: ${videoContext?.timestampFormatted || '00:00'} (${videoContext?.currentTimeSeconds || 0}s)
+- Total Lesson Duration: ${videoContext?.durationFormatted || 'Unknown'} (${videoContext?.durationSeconds || 0}s)
+${videoContext?.videoDescription ? `- Lesson Description / Topic Outline:\n${videoContext.videoDescription.slice(0, 800)}` : ''}
+${videoContext?.courseDescription ? `- Course Curriculum Overview: ${videoContext.courseDescription.slice(0, 400)}` : ''}
+${videoContext?.syllabus && videoContext.syllabus.length > 0 ? `- Playlist Lessons Outline:\n${videoContext.syllabus.slice(0, 15).map((title: string, idx: number) => `  ${idx + 1}. ${title}`).join('\n')}` : ''}
 ${videoContext?.notes && videoContext.notes.length > 0 ? `- Student Notes on this video:\n${videoContext.notes.map((n: any) => `  [${Math.floor(n.timestamp/60)}:${String(n.timestamp%60).padStart(2,'0')}]: ${n.text || n.content}`).join('\n')}` : ''}
+
+${scopeDirective}
 
 TUTOR GUIDELINES:
 1. BE SHORT & DIRECT: Answer in 2 to 4 concise sentences or a compact bulleted list. Do NOT write long paragraphs or walls of text.
 2. ONLY EXPLAIN WHEN NEEDED: Give the direct answer or solution first. Only elaborate if the user explicitly asks for detailed theory.
-3. CLEAN STRUCTURED MARKDOWN: Format with bold key terms, compact lists, and brief code blocks with language identifiers. Keep code examples short and focused.
-4. TIMESTAMPS: When referring to video moments, always write them in [mm:ss] format (e.g., [02:30]) so the student can click to seek the player directly.
-5. NO FLUFF: Skip greeting intros (e.g., "Sure, I'd be happy to explain...") and outro pleasantries. Jump straight into the helpful answer.`;
+3. ADAPT TO SCOPE: If asked to summarize the entire video, summarize the whole lesson from start to finish. If asked about the current timestamp, focus on that moment.
+4. CLEAN STRUCTURED MARKDOWN: Format with bold key terms, compact lists, and brief code blocks with language identifiers. Keep code examples short and focused.
+5. TIMESTAMPS: When referring to video moments, always write them in [mm:ss] format (e.g., [02:30]) so the student can click to seek the player directly.
+6. NO FLUFF: Skip greeting intros (e.g., "Sure, I'd be happy to explain...") and outro pleasantries. Jump straight into the helpful answer.`;
 
     const fullMessages = [
       { role: 'system', content: systemPrompt },

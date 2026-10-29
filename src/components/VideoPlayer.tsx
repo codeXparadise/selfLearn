@@ -56,6 +56,13 @@ const StableYouTubeIframe = React.memo(
           id="youtube-course-player"
           src={src}
           className="absolute inset-0 w-full h-full border-0 pointer-events-auto"
+          style={{
+            transform: 'translateZ(0)',
+            WebkitTransform: 'translateZ(0)',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            willChange: 'transform',
+          }}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
           referrerPolicy="no-referrer-when-downgrade"
@@ -100,6 +107,7 @@ function VideoPlayerComponent({
   const [hudToast, setHudToast] = useState<{ text: string; key: number } | null>(null);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [iframeKey, setIframeKey] = useState(0);
   const countdownIntervalRef = useRef<any>(null);
 
   const targetVideoId = video.youtubeId || video.id;
@@ -120,6 +128,11 @@ function VideoPlayerComponent({
       setHudToast(null);
     }, 1100);
   }, []);
+
+  const reloadPlayer = useCallback(() => {
+    setIframeKey((prev) => prev + 1);
+    showHud('🔄 Player Reloaded');
+  }, [showHud]);
 
   // Load YouTube IFrame API script once
   useEffect(() => {
@@ -272,7 +285,7 @@ function VideoPlayerComponent({
       cancelAutoPlayCountdown();
       playerRef.current = null;
     };
-  }, [video.id, video.youtubeId]);
+  }, [video.id, video.youtubeId, iframeKey]);
 
   // Handle external seek (from Notes or AI)
   useEffect(() => {
@@ -482,6 +495,13 @@ function VideoPlayerComponent({
           toggleFullscreen();
           break;
 
+        // Reload Player Screen
+        case 'r':
+        case 'R':
+          e.preventDefault();
+          reloadPlayer();
+          break;
+
         // Jump to percentage (0 - 9)
         case '0':
         case '1':
@@ -536,12 +556,12 @@ function VideoPlayerComponent({
   // Stable embed URL strictly per video ID: NEVER changes during playback of the same video
   const embedUrl = useMemo(() => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const initialStart = video.currentTime && video.currentTime > 3 ? Math.floor(video.currentTime) : 0;
+    const initialStart = currentTime > 3 ? Math.floor(currentTime) : (video.currentTime && video.currentTime > 3 ? Math.floor(video.currentTime) : 0);
     const originParam = origin ? `&origin=${encodeURIComponent(origin)}` : '';
     const startParam = initialStart > 0 ? `&start=${initialStart}` : '';
     return `https://www.youtube.com/embed/${targetVideoId}?enablejsapi=1&autoplay=1&controls=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3${startParam}${originParam}`;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetVideoId]);
+  }, [targetVideoId, iframeKey]);
 
   if (!isValidCourseVideo) {
     return (
@@ -569,12 +589,20 @@ function VideoPlayerComponent({
         className={`relative w-full bg-black group overflow-hidden ${
           isFullscreen ? 'flex-1 h-full' : 'aspect-video'
         }`}
+        style={{
+          isolation: 'isolate',
+          transform: 'translate3d(0, 0, 0)',
+          WebkitTransform: 'translate3d(0, 0, 0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+          contain: 'layout paint',
+        }}
       >
         
         {/* Native YouTube IFrame - Directly Clickable & Embeddable */}
         <StableYouTubeIframe
           ref={iframeRef}
-          key={targetVideoId}
+          key={`${targetVideoId}_${iframeKey}`}
           src={embedUrl}
           title={video.title}
         />
@@ -831,6 +859,15 @@ function VideoPlayerComponent({
               <span>{video.completed ? 'Done' : 'Mark Done'}</span>
             </button>
 
+            {/* Reload Video Player */}
+            <button
+              onClick={reloadPlayer}
+              className="p-1.5 rounded-full bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white border border-neutral-800 transition-colors"
+              title="Reload video player screen [R]"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+
             {/* Keyboard Shortcuts Cheat Sheet Button */}
             <button
               onClick={() => setShowShortcutsModal(true)}
@@ -919,6 +956,11 @@ function VideoPlayerComponent({
               <div className="flex items-center justify-between p-2 rounded-xl bg-neutral-900/60 border border-neutral-850">
                 <span className="text-neutral-300">Fullscreen</span>
                 <kbd className="px-2 py-0.5 rounded bg-neutral-800 font-mono text-[11px] text-neutral-200">F</kbd>
+              </div>
+
+              <div className="flex items-center justify-between p-2 rounded-xl bg-neutral-900/60 border border-neutral-850">
+                <span className="text-neutral-300">Reload Player Screen</span>
+                <kbd className="px-2 py-0.5 rounded bg-neutral-800 font-mono text-[11px] text-neutral-200">R</kbd>
               </div>
 
               <div className="flex items-center justify-between p-2 rounded-xl bg-neutral-900/60 border border-neutral-850">
