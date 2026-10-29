@@ -6,16 +6,21 @@
 
   ### **Learn from YouTube. Without the noise.**
 
-  **Convert any YouTube playlist into an isolated, distraction-free classroom with dual-level progress tracking and on-demand Ollama AI.**
+  **Convert any YouTube playlist into an isolated, distraction-free classroom with dual-level progress tracking and an on-demand AI tutor.**
+
+  <br />
+
+  ### 🌐 **Live Application**
+  👉 **[Self Learn — Distraction-Free YouTube Classroom & AI Course Hub](https://self-learn-cyan.vercel.app/)** 👈
 
   <br />
 
   <!-- Badges -->
+  <a href="https://self-learn-cyan.vercel.app/">
+    <img src="https://img.shields.io/badge/Deployed%20on-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel Deployment" />
+  </a>
   <a href="https://github.com/codeXparadise/selfLearn/stargazers">
     <img src="https://img.shields.io/github/stars/codeXparadise/selfLearn?style=for-the-badge&color=EA4335" alt="GitHub Stars" />
-  </a>
-  <a href="https://github.com/codeXparadise/selfLearn/network/members">
-    <img src="https://img.shields.io/github/forks/codeXparadise/selfLearn?style=for-the-badge&color=F9AB00" alt="GitHub Forks" />
   </a>
   <a href="https://github.com/codeXparadise/selfLearn/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/License-MIT%20%2B%20REA%20Restriction-34A853?style=for-the-badge" alt="License" />
@@ -27,12 +32,14 @@
   <br /><br />
 
   <p align="center">
-    <a href="#-overview">Overview</a> •
-    <a href="#-tech-stack--tools">Tech Stack</a> •
-    <a href="#-core-features">Key Features</a> •
-    <a href="#-vibe-coding-declaration">Vibe-Coding</a> •
-    <a href="#-getting-started">Quick Start</a> •
-    <a href="#-reverse-engineering-ban--legal">Legal & REA Ban</a>
+    <a href="#-what-is-selflearn">What is SelfLearn?</a> •
+    <a href="#-how-it-works-workflow">How It Works</a> •
+    <a href="#-tech-stack">Tech Stack</a> •
+    <a href="#-features-at-a-glance">Features</a> •
+    <a href="#-architecture-tree">Architecture</a> •
+    <a href="#-vibe-coding">Vibe-Coding</a> •
+    <a href="#-quick-start">Quick Start</a> •
+    <a href="#-legal--reverse-engineering-ban">Legal & REA Ban</a>
   </p>
 
 </div>
@@ -41,76 +48,138 @@
 
 > [!NOTE]
 > **Built with Vibe-Coding ⚡**  
-> SelfLearn was engineered through deep-flow **Vibe-Coding**—blending human architectural vision, UI/UX aesthetics, and high-frequency agentic pairing to create an uncompromising, production-grade learning platform.
+> SelfLearn was engineered through deep-flow **Vibe-Coding**—combining architectural clarity, intuitive UI/UX design, and AI-accelerated development to deliver a fast, reliable, production-grade learning platform.
 
 ---
 
-## 📖 Overview
+## 💡 What is SelfLearn? (In Plain English)
 
-Traditional YouTube is engineered to capture and hold your attention with algorithmic sidebars, infinite comment threads, and endless recommendations. 
+Have you ever opened YouTube to learn coding or study a new subject, only to get sidetracked by recommended videos, clickbait thumbnails, or comments?
 
-**SelfLearn** is an open-source, distraction-free YouTube classroom engine. Simply paste any public or unlisted YouTube playlist link, and SelfLearn isolates the curriculum into an ad-free, locked environment with:
+**SelfLearn solves this completely.**
 
-1. **Algorithmic Isolation**: No sidebars, no comment sections, no recommended rabbit holes.
-2. **Dual-Tier Progress Tracking**: Second-level playback resumption for individual lessons + macro completion percentages across the entire curriculum.
-3. **Contextual Ollama AI Tutor**: Floating frosted-glass AI drawer that answers your questions based on the video being watched, citing clickable `⏱️ [mm:ss]` timestamp jump pills.
-4. **Zero-API Playlist Ingestion**: Directly scrapes durations, titles, and video metadata without requiring YouTube Data v3 API keys or Google Cloud quotas.
-5. **Multi-User Isolation**: Independent Firestore collections and activity histories for every signed-in learner.
-
----
-
-## 🛠 Tech Stack & Tools
-
-SelfLearn is crafted using industry-standard modern web technologies and open-source models:
-
-<div align="center">
-
-| Technology | Role | Official Logo / Badge |
-| :--- | :--- | :--- |
-| **Next.js 14** | Core Framework (App Router & Server Actions) | <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/nextjs/nextjs-original.svg" alt="Next.js" width="36" /> |
-| **React 18** | UI Architecture & Hooks | <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/react/react-original.svg" alt="React" width="36" /> |
-| **TypeScript** | End-to-End Type Safety | <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/typescript/typescript-original.svg" alt="TypeScript" width="36" /> |
-| **Tailwind CSS** | Styling & Google Labs Minimalist System | <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/tailwindcss/tailwindcss-original.svg" alt="Tailwind CSS" width="36" /> |
-| **shadcn/ui** | Accessible Headless UI Primitives (Radix UI) | <img src="https://avatars.githubusercontent.com/u/139895814?s=200&v=4" alt="shadcn/ui" width="36" /> |
-| **Firebase** | Authentication (Google Auth + Email) & Cloud Firestore | <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/firebase/firebase-plain.svg" alt="Firebase" width="36" /> |
-| **Ollama** | Local & Contextual LLM Runtime (`gemma4:31b`, `beam`, `nemotron`) | <img src="public/ollama.png" alt="Ollama" width="36" /> |
-| **Framer Motion** | Physics-Based UI Micro-Interactions | <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/framermotion/framermotion-original.svg" alt="Framer Motion" width="36" /> |
-| **GSAP** | High-Performance Timeline Animations | <img src="https://avatars.githubusercontent.com/u/2329415?s=200&v=4" alt="GSAP" width="36" /> |
-| **Lenis** | Smooth Momentum Physics Scrolling | <img src="https://avatars.githubusercontent.com/u/100084339?s=200&v=4" alt="Lenis" width="36" /> |
-| **Node.js** | Server Runtime & API Handlers | <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/nodejs/nodejs-original.svg" alt="Node.js" width="36" /> |
-| **Lucide React** | Minimalist Iconography | <img src="https://lucide.dev/logo.light.svg" alt="Lucide" width="36" /> |
-
-</div>
+1. You paste **any YouTube playlist link** (or ask our AI curator to find the best course for you).
+2. SelfLearn strips away **all distractions**—no recommendations, no ads, no comment sections, and no algorithmic rabbit holes.
+3. You get a **clean, structured classroom** with a syllabus sidebar, real-time progress bars, and an AI tutor that can answer questions about what's being taught or summarize the whole lesson for you.
+4. When you leave and come back, it resumes playing at the **exact second** you left off.
 
 ---
 
-## ✨ Core Features
+## 🔄 How It Works (Workflow Diagram)
 
-### 🛡️ 1. Algorithmic Isolation Frame
-- No recommended feeds, related videos, or comment distractions.
-- Hardware-composited clean frame eliminating video blinking or black-screen glitches.
-- Keyboard shortcuts (`Space`/`K` to play/pause, `J`/`L` for 10s skip, `M` to mute, `F` for fullscreen, `0-9` for percentage scrubbing).
+Here is a visual overview of how SelfLearn takes you from discovering a course to mastering it:
 
-### 📊 2. Dual-Tier Progress Architecture
-- **Micro Tracker**: Saves exact second-level timestamps every few seconds. If you close your browser, you resume at the exact second you left.
-- **Macro Tracker**: Real-time progress bars calculating whole-course completion percentage.
-- **Auto-Next Countdown**: Automatic transition to the next lesson with an interactive 5-second cancel overlay.
+```mermaid
+flowchart TD
+    subgraph Step1["1. Course Ingestion"]
+        A["Learner"] -->|"Pastes YouTube Playlist Link"| B["Playlist Ingestion Engine"]
+        A -->|"Asks: 'Find Python / Data Science course'"| C["AI Course Curator Widget"]
+        C -->|"Auto-discovers Top Playlists"| B
+    end
 
-### 🤖 3. On-Demand Ollama AI Tutor
-- Translucent floating drawer overlay accessible anytime via the bottom FAB button.
-- Clean structured Markdown rendering with copyable code blocks, syntax tags, and bold emphasis.
-- Auto-injects current lesson title, instructor, and exact video timestamp into queries.
-- Clickable `⏱️ [mm:ss]` timestamp jump pills let you seek the video directly from the AI's explanation.
-- Supports 7 open models including Gemma 4:31B, Beam, and Nemotron.
+    subgraph Step2["2. Distraction-Free Classroom"]
+        B --> D["Hardware-Isolated Video Player (Zero Ads / Zero Noise)"]
+        B --> E["Interactive Syllabus (Lesson-by-Lesson Progress)"]
+        D --> F["Floating AI Tutor (Ollama / Open LLMs)"]
+    end
 
-### 📱 4. Responsive 2-Grid Mobile Layout
-- **Top Grid**: Sticky video player container.
-- **Bottom Grid**: Expandable/collapsible syllabus with curriculum search and individual progress bars.
-- Dedicated floating AI assistant at the bottom.
+    subgraph Step3["3. Intelligent Progress & Sync"]
+        D -->|"Auto-saves timestamp every 5 seconds"| G["Cloud Firestore Database"]
+        E -->|"Calculates overall course % complete"| G
+        G --> H["Instant Resume Across All Devices"]
+    end
+```
 
 ---
 
-## ⚡ Vibe-Coding Declaration
+## 🛠 Tech Stack
+
+A breakdown of every technology powering SelfLearn and its role in the system:
+
+| Technology / Service | What It Does (Role) | Official Logo |
+| :--- | :--- | :---: |
+| **Next.js 14** | Core full-stack web framework (App Router & Server Actions) | <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/nextjs/nextjs-original.svg" alt="Next.js" width="32" /> |
+| **React 18** | Interactive user interface components and state hooks | <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/react/react-original.svg" alt="React" width="32" /> |
+| **TypeScript** | Strict end-to-end type safety preventing runtime bugs | <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/typescript/typescript-original.svg" alt="TypeScript" width="32" /> |
+| **Firebase** | User Authentication (Google Sign-In + Email/Password) & Cloud Firestore Database | <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/firebase/firebase-plain.svg" alt="Firebase" width="32" /> |
+| **Vercel** | Global edge hosting, serverless execution, and deployment | <img src="https://assets.vercel.com/image/upload/v1588805858/repositories/vercel/logo.png" alt="Vercel" width="32" /> |
+| **Ollama** | LLM runtime powering the AI Tutor (`gemma4:31b`, `beam`, `nemotron`) | <img src="public/ollama.png" alt="Ollama" width="32" /> |
+| **Tailwind CSS** | Minimalist styling, dark/light themes, and Google Labs design system | <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/tailwindcss/tailwindcss-original.svg" alt="Tailwind CSS" width="32" /> |
+| **Framer Motion** | Glassmorphism blur effects, modal animations, and tactile transitions | <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/framermotion/framermotion-original.svg" alt="Framer Motion" width="32" /> |
+| **Node.js** | Backend server runtime and YouTube metadata parser | <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/nodejs/nodejs-original.svg" alt="Node.js" width="32" /> |
+| **Lucide Icons** | Ultra-clean iconography across video player and navigation | <img src="https://lucide.dev/logo.light.svg" alt="Lucide" width="32" /> |
+
+---
+
+## 🎯 Features at a Glance
+
+- 🚫 **100% Distraction-Free Player**  
+  No recommended video feeds, no sidebars, no autoplaying rabbit holes, and no comment sections.
+- ⏱️ **Second-Level Playback Resumption**  
+  Never lose your spot. Pause at 08:59, close your browser, and it resumes at 08:59 when you return.
+- 📊 **Dual Progress Tracking**  
+  Track individual lesson progress (0% to 100%) and whole-course completion percentages.
+- 🤖 **Context-Aware AI Tutor**  
+  - Ask questions about the specific second you are watching (`⏱️ Synced at mm:ss`).
+  - Or switch to `🌐 Full Video / General` mode to get a complete, structured summary of the entire lesson in seconds.
+  - Cites clickable timestamp jump pills (e.g. `⏱️ 02:30`) that seek the video immediately.
+- 🔍 **AI Course Curator on Dashboard**  
+  Don't know what course to take? Type any topic (e.g., *Python, Machine Learning, React*) and the AI will find, rank, and import complete YouTube playlists for you.
+- ⚡ **Zero YouTube API Quota Needed**  
+  Scrapes video durations, titles, and thumbnails directly without burning through Google Cloud API quotas.
+- ⌨️ **Pro Keyboard Shortcuts**  
+  - `Space` / `K`: Play / Pause
+  - `←` / `J` & `→` / `L`: Skip 10 seconds backward / forward
+  - `↑` / `↓`: Volume adjustment
+  - `M`: Mute / Unmute
+  - `N` / `P`: Next / Previous lesson in syllabus
+  - `F`: Fullscreen toggle
+  - `R`: Instant player screen reload
+  - `0 - 9`: Jump to 0% - 90% of video
+  - `?`: Open keyboard shortcuts cheat sheet
+- 🌓 **Smooth Dark & Light Mode**  
+  Automatic or manual switching between minimalist dark and clean white themes.
+
+---
+
+## 🌲 Architecture Tree
+
+The visual architecture of SelfLearn connecting user actions to cloud services:
+
+```mermaid
+graph TD
+    User["Learner / User"] --> WebApp["SelfLearn Web Application"]
+    
+    subgraph UI["Frontend Layer (Next.js & React)"]
+        WebApp --> LP["Minimalist Landing Page (/)"]
+        WebApp --> DB["Course Hub Dashboard (/dashboard)"]
+        WebApp --> CR["Classroom Workspace (/classroom/[id])"]
+        WebApp --> PR["User Profile & Settings (/profile)"]
+        
+        CR --> VP["Isolated Video Player (Custom Controls)"]
+        CR --> SY["Curriculum Syllabus (Search & Progress)"]
+        CR --> AI["Ollama AI Tutor Panel (Markdown & Timestamps)"]
+        DB --> CC["AI Course Curator Widget (Discovery)"]
+    end
+
+    subgraph API["Backend API Layer"]
+        VP --> API1["/api/courses/[id]/progress"]
+        CC --> API2["/api/ai/curate-playlists"]
+        AI --> API3["/api/ai/chat"]
+        WebApp --> API4["/api/auth (Login / Register / Google Sync)"]
+    end
+
+    subgraph CloudServices["Cloud & Infrastructure"]
+        API1 --> FB["Firebase Firestore (User Data & Progress)"]
+        API4 --> FA["Firebase Authentication"]
+        API3 --> OL["Ollama Runtime (Open LLMs)"]
+        WebApp --> VC["Vercel Global Edge Network"]
+    end
+```
+
+---
+
+## ⚡ Vibe-Coding
 
 ```
  __      ___ _            _____          _ _             
@@ -123,19 +192,14 @@ SelfLearn is crafted using industry-standard modern web technologies and open-so
                                                    |___/ 
 ```
 
-This codebase was developed utilizing modern **Vibe-Coding** practices:
-- Rapid architectural iterations guided by developer vision.
-- Zero boilerplate lag with immediate, verified build steps.
-- High focus on user experience, tactile animations, and fluid transitions.
+SelfLearn is a proud demonstration of modern **Vibe-Coding**:
+- Built rapidly through deep flow and agentic collaboration.
+- Continuous real-time feedback loops between vision, design, and execution.
+- Delivering a refined, human-centric learning tool free of corporate clutter.
 
 ---
 
-## 🚀 Getting Started
-
-### Prerequisites
-- [Node.js](https://nodejs.org/) (v18.17 or higher)
-- [npm](https://www.npmjs.com/) or [pnpm](https://pnpm.io/)
-- (Optional) [Ollama](https://ollama.com/) running locally on port `11434` for offline AI
+## 🚀 Quick Start (For Developers)
 
 ### 1. Clone the Repository
 ```bash
@@ -149,67 +213,29 @@ npm install
 ```
 
 ### 3. Setup Environment Variables
-Copy `.env.example` to `.env`:
-```bash
-cp .env.example .env
-```
-Add your Firebase Web Credentials from the [Firebase Console](https://console.firebase.google.com/):
+Create a `.env` file in the root directory (refer to `.env.example`):
 ```env
-NEXT_PUBLIC_FIREBASE_API_KEY=your_key
+# Firebase Web App Credentials
+NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_id
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+
+# Auth Secret for Stateless Sessions
+JWT_SECRET=your_secure_random_secret_string
 ```
 
-### 4. Run Development Server
+### 4. Run Locally
 ```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) to view the application.
-
-### 5. Production Build
-```bash
-npm run build
-npm start
-```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 📁 Project Architecture
-
-```
-selfLearn/
-├── public/                  # Logo, icons, favicon, Ollama assets
-├── src/
-│   ├── app/
-│   │   ├── classroom/[id]/  # Distraction-free classroom player
-│   │   ├── dashboard/       # User course hub & playlist manager
-│   │   ├── profile/         # Settings, stats, AI model config
-│   │   ├── api/
-│   │   │   ├── ai/chat/     # Ollama AI streaming endpoint
-│   │   │   ├── courses/     # YouTube playlist scraper & courses CRUD
-│   │   │   └── auth/        # Per-user auth & activity sessions
-│   │   ├── page.tsx         # Google Labs minimalist single-page landing
-│   │   └── layout.tsx       # Root layout & providers
-│   ├── components/
-│   │   ├── VideoPlayer.tsx  # YouTube IFrame player with zero-jitter compositing
-│   │   ├── AIPanel.tsx      # Frosted-glass Ollama AI drawer
-│   │   ├── MarkdownRenderer.tsx # Custom markdown with code copy & timestamp pills
-│   │   ├── Navbar.tsx       # Context-aware dynamic navigation
-│   │   └── Logo.tsx         # Unified SVG/PNG brand emblem
-│   ├── context/             # AuthContext & ThemeContext
-│   └── lib/                 # Firebase client & database utilities
-├── vercel.json              # Vercel deployment & security headers config
-├── LICENSE                  # MIT License + REA Tool Ban
-├── CODE_OF_CONDUCT.md       # Contributor Covenant v2.1
-└── COPYRIGHT.md             # Intellectual property & Reverse Engineering notice
-```
-
----
-
-## ⚖️ Reverse Engineering Ban & Legal Notice
+## ⚖️ Legal & Reverse Engineering Ban
 
 > [!CAUTION]
 > **REA (Reverse Engineer Anything) Tool & Automated Decompilation Prohibition**  
