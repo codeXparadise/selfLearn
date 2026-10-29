@@ -61,10 +61,6 @@ const StableYouTubeIframe = React.memo(
           referrerPolicy="no-referrer-when-downgrade"
           loading="eager"
           title={title}
-          style={{
-            WebkitMaskImage: '-webkit-radial-gradient(white, black)',
-            transform: 'translateZ(0)',
-          }}
         />
       );
     }
@@ -573,11 +569,6 @@ function VideoPlayerComponent({
         className={`relative w-full bg-black group overflow-hidden ${
           isFullscreen ? 'flex-1 h-full' : 'aspect-video'
         }`}
-        style={{
-          WebkitMaskImage: '-webkit-radial-gradient(white, black)',
-          transform: 'translateZ(0)',
-          contain: 'paint',
-        }}
       >
         
         {/* Native YouTube IFrame - Directly Clickable & Embeddable */}

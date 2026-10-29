@@ -177,25 +177,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithGoogle = async () => {
     setLoading(true);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const fbUser = result.user;
-      const res = await fetch('/api/auth/google-sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: fbUser.email,
-          displayName: fbUser.displayName,
-          photoURL: fbUser.photoURL,
-          googleId: fbUser.uid,
-        }),
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error);
+      let fbUser: any;
+      try {
+        const result = await signInWithPopup(auth, googleProvider);
+        fbUser = result.user;
+      } catch (authErr: any) {
+        if (authErr.code === 'auth/unauthorized-domain') {
+          throw new Error('This domain is not authorized in Firebase. Please add your domain to Firebase Console > Authentication > Settings > Authorized Domains.');
+        }
+        if (authErr.code === 'auth/popup-closed-by-user') {
+          return;
+        }
+        throw new Error(authErr.message || 'Google Sign-In failed.');
+      }
+
+      let backendData: any = null;
+      try {
+        const res = await fetch('/api/auth/google-sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: fbUser.email,
+            displayName: fbUser.displayName,
+            photoURL: fbUser.photoURL,
+            googleId: fbUser.uid,
+          }),
+        });
+        backendData = await res.json().catch(() => null);
+      } catch (e) {
+        console.warn('Backend google-sync network warning:', e);
+      }
 
       let fullUser: User = {
-        ...data.user,
         id: fbUser.uid,
+        email: fbUser.email || '',
+        displayName: fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'Learner'),
+        photoURL: fbUser.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${fbUser.uid}`,
+        authProvider: 'google',
         emailVerified: fbUser.emailVerified,
+        ...(backendData?.user || {}),
       };
 
       const cloudProfile = await getUserProfileFromFirebase(fbUser.uid);
@@ -210,8 +230,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setUser(fullUser);
-      setToken(data.token);
-      localStorage.setItem('self_learn_token', data.token);
+      const activeToken = backendData?.token || `sl_${fbUser.uid}_${Date.now()}`;
+      setToken(activeToken);
+      localStorage.setItem('self_learn_token', activeToken);
       await syncUserProfileToFirebase(fullUser);
 
       if (!fullUser.ollamaApiKey && !sessionStorage.getItem('ollama_onboarding_skipped')) {
@@ -227,8 +248,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       let fbUid = '';
       let fbVerified = false;
+      let fbUser: any = null;
       try {
         const userCred = await signInWithEmailAndPassword(auth, email.trim(), password);
+        fbUser = userCred.user;
         fbUid = userCred.user.uid;
         fbVerified = userCred.user.emailVerified;
       } catch (fbErr: any) {
@@ -241,18 +264,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn('Firebase client signIn warning:', fbErr.message);
       }
 
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password }),
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || 'Failed to login');
+      let backendData: any = null;
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim(), password, firebaseUid: fbUid }),
+        });
+        backendData = await res.json().catch(() => null);
+      } catch (e) {
+        console.warn('Backend login API network warning:', e);
+      }
 
+      if (!fbUid && !backendData?.success) {
+        throw new Error(backendData?.error || 'Invalid email or password.');
+      }
+
+      const userId = fbUid || backendData?.user?.id || `usr_${Date.now()}`;
       let fullUser: User = {
-        ...data.user,
-        id: fbUid || data.user.id,
+        id: userId,
+        email: email.trim(),
+        displayName: backendData?.user?.displayName || (fbUser?.displayName) || email.split('@')[0],
+        photoURL: backendData?.user?.photoURL || fbUser?.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${userId}`,
+        authProvider: 'firebase',
         emailVerified: fbVerified,
+        ...(backendData?.user || {}),
       };
 
       if (fbUid) {
@@ -269,8 +305,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setUser(fullUser);
-      setToken(data.token);
-      localStorage.setItem('self_learn_token', data.token);
+      const activeToken = backendData?.token || `sl_${userId}_${Date.now()}`;
+      setToken(activeToken);
+      localStorage.setItem('self_learn_token', activeToken);
       await syncUserProfileToFirebase(fullUser);
     } finally {
       setLoading(false);
@@ -314,28 +351,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(fbErr.message || 'Failed to create Firebase account.');
       }
 
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, email: form.email.trim(), firebaseUid: fbUid }),
-      });
-      const data = await res.json();
+      let backendData: any = null;
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...form, email: form.email.trim(), firebaseUid: fbUid }),
+        });
+        backendData = await res.json().catch(() => null);
+      } catch (e) {
+        console.warn('Backend register sync warning:', e);
+      }
 
       const fullUser: User = {
-        id: fbUid || data.user?.id || `usr_${Date.now()}`,
+        id: fbUid || backendData?.user?.id || `usr_${Date.now()}`,
         email: form.email.trim(),
         displayName: form.displayName || form.email.split('@')[0],
-        photoURL: data.user?.photoURL || '',
+        photoURL: backendData?.user?.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${fbUid || form.email}`,
         ollamaApiKey: form.ollamaApiKey || '',
         ollamaModel: form.ollamaModel || 'gemma4:31b',
         emailVerified: fbUser?.emailVerified || false,
       };
 
       setUser(fullUser);
-      if (data.token) {
-        setToken(data.token);
-        localStorage.setItem('self_learn_token', data.token);
-      }
+      const activeToken = backendData?.token || `sl_${fullUser.id}_${Date.now()}`;
+      setToken(activeToken);
+      localStorage.setItem('self_learn_token', activeToken);
       await syncUserProfileToFirebase(fullUser);
     } finally {
       setLoading(false);

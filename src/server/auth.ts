@@ -5,6 +5,7 @@ import path from 'node:path';
 const DATA_DIR = process.env.VERCEL ? path.join('/tmp', 'data') : path.join(process.cwd(), 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
+const SESSION_SECRET = process.env.SESSION_SECRET || 'selflearn_stateless_secret_key_2026';
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -24,7 +25,9 @@ function readUsers(): any[] {
 }
 
 function writeUsers(users: any[]) {
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
+  } catch {}
 }
 
 function readSessions(): Record<string, any> {
@@ -41,7 +44,9 @@ function readSessions(): Record<string, any> {
 }
 
 function writeSessions(sessions: Record<string, any>) {
-  fs.writeFileSync(SESSIONS_FILE, JSON.stringify(sessions, null, 2), 'utf-8');
+  try {
+    fs.writeFileSync(SESSIONS_FILE, JSON.stringify(sessions, null, 2), 'utf-8');
+  } catch {}
 }
 
 export function hashPassword(password: string) {
@@ -55,8 +60,33 @@ export function verifyPassword(password: string, salt: string, expectedHash: str
   return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(expectedHash, 'hex'));
 }
 
-export function generateSessionToken() {
+export function generateSessionToken(payload?: { userId: string; email: string; displayName?: string }) {
+  if (payload) {
+    const data = JSON.stringify({
+      ...payload,
+      exp: Date.now() + 30 * 24 * 60 * 60 * 1000,
+    });
+    const b64 = Buffer.from(data).toString('base64url');
+    const sig = crypto.createHmac('sha256', SESSION_SECRET).update(b64).digest('base64url');
+    return `sl_${b64}.${sig}`;
+  }
   return crypto.randomBytes(32).toString('hex');
+}
+
+export function verifySessionToken(token: string): { userId: string; email: string; displayName?: string; exp: number } | null {
+  if (!token || !token.startsWith('sl_')) return null;
+  const parts = token.slice(3).split('.');
+  if (parts.length !== 2) return null;
+  const [b64, sig] = parts;
+  const expectedSig = crypto.createHmac('sha256', SESSION_SECRET).update(b64).digest('base64url');
+  if (sig !== expectedSig) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(b64, 'base64url').toString('utf-8'));
+    if (parsed.exp && parsed.exp < Date.now()) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
 }
 
 export function sanitizeUser(user: any) {
@@ -96,14 +126,11 @@ export function createUser({
       if (ollamaModel) existing.ollamaModel = ollamaModel;
       writeUsers(users);
 
-      const token = generateSessionToken();
-      const sessions = readSessions();
-      sessions[token] = {
+      const token = generateSessionToken({
         userId: existing.id,
-        createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      };
-      writeSessions(sessions);
+        email: existing.email,
+        displayName: existing.displayName,
+      });
       return { user: sanitizeUser(existing), token };
     }
     throw new Error('An account with this email already exists. Please sign in instead.');
@@ -138,22 +165,59 @@ export function createUser({
   users.push(newUser);
   writeUsers(users);
 
-  const token = generateSessionToken();
-  const sessions = readSessions();
-  sessions[token] = {
+  const token = generateSessionToken({
     userId: id,
-    createdAt: now,
-    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-  };
-  writeSessions(sessions);
+    email: newUser.email,
+    displayName: newUser.displayName,
+  });
 
   return { user: sanitizeUser(newUser), token };
 }
 
-export function authenticateUser(email: string, password: string) {
-  const user = findUserByEmail(email);
+export function authenticateUser(email: string, password?: string, firebaseUid?: string) {
+  const users = readUsers();
+  let user = findUserByEmail(email);
+  const now = new Date().toISOString();
+
+  // If already authenticated by Firebase on client, accept and sync
+  if (firebaseUid) {
+    if (user) {
+      user.id = firebaseUid;
+      user.lastLoginAt = now;
+      const idx = users.findIndex(u => u.email === user.email);
+      users[idx] = user;
+      writeUsers(users);
+    } else {
+      user = {
+        id: firebaseUid,
+        email: email.trim().toLowerCase(),
+        displayName: email.split('@')[0],
+        photoURL: `https://api.dicebear.com/7.x/bottts/svg?seed=${firebaseUid}`,
+        authProvider: 'firebase',
+        ollamaApiKey: '',
+        ollamaModel: 'gemma4:31b',
+        createdAt: now,
+        lastLoginAt: now,
+        activityHistory: [],
+      };
+      users.push(user);
+      writeUsers(users);
+    }
+
+    const token = generateSessionToken({
+      userId: user.id,
+      email: user.email,
+      displayName: user.displayName,
+    });
+    return { user: sanitizeUser(user), token };
+  }
+
+  // Local email & password authentication fallback
   if (!user) {
     throw new Error('Invalid email or password.');
+  }
+  if (!password) {
+    throw new Error('Please provide your password.');
   }
   if (!user.passwordHash || !user.salt) {
     throw new Error('This account was created with Google Sign-In. Please sign in with Google.');
@@ -163,22 +227,18 @@ export function authenticateUser(email: string, password: string) {
     throw new Error('Invalid email or password.');
   }
 
-  user.lastLoginAt = new Date().toISOString();
-  const users = readUsers();
+  user.lastLoginAt = now;
   const idx = users.findIndex(u => u.id === user.id);
   if (idx !== -1) {
     users[idx] = user;
     writeUsers(users);
   }
 
-  const token = generateSessionToken();
-  const sessions = readSessions();
-  sessions[token] = {
+  const token = generateSessionToken({
     userId: user.id,
-    createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-  };
-  writeSessions(sessions);
+    email: user.email,
+    displayName: user.displayName,
+  });
 
   return { user: sanitizeUser(user), token };
 }
@@ -216,20 +276,37 @@ export function syncGoogleUser({ email, displayName, photoURL, googleId }: any) 
     writeUsers(users);
   }
 
-  const token = generateSessionToken();
-  const sessions = readSessions();
-  sessions[token] = {
+  const token = generateSessionToken({
     userId: user.id,
-    createdAt: now,
-    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-  };
-  writeSessions(sessions);
+    email: user.email,
+    displayName: user.displayName,
+  });
 
   return { user: sanitizeUser(user), token };
 }
 
 export function getSessionUser(token: string) {
   if (!token) return null;
+
+  // 1. Verify stateless signed token
+  const payload = verifySessionToken(token);
+  if (payload) {
+    const user = findUserById(payload.userId);
+    if (user) return sanitizeUser(user);
+    // Stateless fallback user object if local disk is empty
+    return {
+      id: payload.userId,
+      email: payload.email,
+      displayName: payload.displayName || payload.email.split('@')[0],
+      photoURL: `https://api.dicebear.com/7.x/bottts/svg?seed=${payload.userId}`,
+      authProvider: 'firebase',
+      ollamaApiKey: '',
+      ollamaModel: 'gemma4:31b',
+      activityHistory: [],
+    };
+  }
+
+  // 2. Fallback to stateful session store
   const sessions = readSessions();
   const session = sessions[token];
   if (!session) return null;
@@ -327,4 +404,3 @@ export function deleteUserAccount(userId: string) {
   writeSessions(sessions);
   return true;
 }
-
