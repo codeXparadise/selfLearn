@@ -47,7 +47,31 @@ interface VideoPlayerProps {
   onToggleAutoPlayNext: () => void;
 }
 
-export function VideoPlayer({
+const StableYouTubeIframe = React.memo(
+  React.forwardRef<HTMLIFrameElement, { src: string; title: string }>(
+    function StableYouTubeIframe({ src, title }, ref) {
+      return (
+        <iframe
+          ref={ref}
+          id="youtube-course-player"
+          src={src}
+          className="absolute inset-0 w-full h-full border-0 pointer-events-auto"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          referrerPolicy="no-referrer-when-downgrade"
+          loading="eager"
+          title={title}
+          style={{
+            WebkitMaskImage: '-webkit-radial-gradient(white, black)',
+            transform: 'translateZ(0)',
+          }}
+        />
+      );
+    }
+  )
+);
+
+function VideoPlayerComponent({
   video,
   courseVideos,
   onVideoEnd,
@@ -141,6 +165,11 @@ export function VideoPlayer({
     [video.id, duration, onProgressUpdate, onTimeUpdate]
   );
 
+  const syncProgressRef = useRef(syncProgress);
+  useEffect(() => {
+    syncProgressRef.current = syncProgress;
+  });
+
   const cancelAutoPlayCountdown = () => {
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current);
@@ -204,11 +233,11 @@ export function VideoPlayer({
                 setPlayerError(null);
                 cancelAutoPlayCountdown();
                 if (timeTrackerRef.current) clearInterval(timeTrackerRef.current);
-                timeTrackerRef.current = setInterval(() => syncProgress(false), 1000);
+                timeTrackerRef.current = setInterval(() => syncProgressRef.current(false), 1000);
               } else if (e.data === window.YT.PlayerState.PAUSED) {
                 setIsPlaying(false);
                 if (timeTrackerRef.current) clearInterval(timeTrackerRef.current);
-                syncProgress(true);
+                syncProgressRef.current(true);
               } else if (e.data === window.YT.PlayerState.ENDED) {
                 handleVideoEnded();
               }
@@ -544,19 +573,18 @@ export function VideoPlayer({
         className={`relative w-full bg-black group overflow-hidden ${
           isFullscreen ? 'flex-1 h-full' : 'aspect-video'
         }`}
+        style={{
+          WebkitMaskImage: '-webkit-radial-gradient(white, black)',
+          transform: 'translateZ(0)',
+          contain: 'paint',
+        }}
       >
         
         {/* Native YouTube IFrame - Directly Clickable & Embeddable */}
-        <iframe
+        <StableYouTubeIframe
           ref={iframeRef}
-          id="youtube-course-player"
           key={targetVideoId}
           src={embedUrl}
-          className="absolute inset-0 w-full h-full border-0 pointer-events-auto"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-          referrerPolicy="no-referrer-when-downgrade"
-          loading="eager"
           title={video.title}
         />
 
@@ -584,7 +612,7 @@ export function VideoPlayer({
         {hudToast && (
           <div
             key={hudToast.key}
-            className="absolute top-6 left-1/2 -translate-x-1/2 z-40 px-4 py-1.5 rounded-full bg-black/85 backdrop-blur-md border border-neutral-700/80 text-white font-mono text-xs sm:text-sm font-semibold tracking-wide shadow-xl animate-in fade-in zoom-in-95 pointer-events-none flex items-center gap-2"
+            className="absolute top-6 left-1/2 -translate-x-1/2 z-40 px-4 py-1.5 rounded-full bg-neutral-900/95 border border-neutral-700 text-white font-mono text-xs sm:text-sm font-semibold tracking-wide shadow-xl animate-in fade-in zoom-in-95 pointer-events-none flex items-center gap-2"
           >
             <span>{hudToast.text}</span>
           </div>
@@ -594,7 +622,7 @@ export function VideoPlayer({
         {hasPrevious && onPreviousVideo && (
           <button
             onClick={onPreviousVideo}
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-black/70 hover:bg-[#EA4335] text-white flex items-center justify-center backdrop-blur-xs border border-white/10 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 hover:scale-110 shadow-lg"
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-black/80 hover:bg-[#EA4335] text-white flex items-center justify-center border border-white/10 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 hover:scale-110 shadow-lg"
             title={`Previous: ${previousVideo?.title || 'Lesson'}`}
           >
             <ChevronLeft className="w-6 h-6 -ml-0.5" />
@@ -605,7 +633,7 @@ export function VideoPlayer({
         {hasNext && onNextVideo && (
           <button
             onClick={onNextVideo}
-            className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-black/70 hover:bg-[#EA4335] text-white flex items-center justify-center backdrop-blur-xs border border-white/10 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 hover:scale-110 shadow-lg"
+            className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-black/80 hover:bg-[#EA4335] text-white flex items-center justify-center border border-white/10 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 hover:scale-110 shadow-lg"
             title={`Next: ${nextVideo?.title || 'Lesson'}`}
           >
             <ChevronRight className="w-6 h-6 -mr-0.5" />
@@ -614,7 +642,7 @@ export function VideoPlayer({
 
         {/* Auto-Play Next Countdown Banner */}
         {nextCountdown !== null && (
-          <div className="absolute inset-0 bg-black/85 backdrop-blur-xs z-30 flex flex-col items-center justify-center text-white animate-in fade-in">
+          <div className="absolute inset-0 bg-black/90 z-30 flex flex-col items-center justify-center text-white animate-in fade-in">
             <Sparkles className="w-10 h-10 text-[#EA4335] mb-3 animate-bounce" />
             <h3 className="text-lg font-bold mb-1">Up Next in Course</h3>
             <p className="text-neutral-300 text-xs max-w-md text-center line-clamp-1 mb-4 px-4">
@@ -836,7 +864,7 @@ export function VideoPlayer({
 
       {/* Keyboard Shortcuts Cheat Sheet Modal */}
       {showShortcutsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 animate-in fade-in">
           <div className="w-full max-w-md rounded-3xl bg-neutral-950 border border-neutral-800 p-6 text-white shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
               <div className="flex items-center gap-2">
@@ -923,3 +951,5 @@ export function VideoPlayer({
     </div>
   );
 }
+
+export const VideoPlayer = React.memo(VideoPlayerComponent);

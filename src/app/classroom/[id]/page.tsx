@@ -56,9 +56,22 @@ export default function ClassroomPage() {
   const [playlistSearch, setPlaylistSearch] = useState('');
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const currentTimeRef = React.useRef(0);
+  const durationRef = React.useRef(0);
   const [seekTarget, setSeekTarget] = useState<number | null>(null);
   const [autoPlayNext, setAutoPlayNext] = useState(true);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+
+  const toggleAIOpen = () => {
+    setIsAIOpen((prev) => {
+      const next = !prev;
+      if (next) {
+        setCurrentTime(currentTimeRef.current);
+        setDuration(durationRef.current);
+      }
+      return next;
+    });
+  };
 
   // Handle Drag-to-Resize for Desktop Left Grid
   useEffect(() => {
@@ -404,34 +417,167 @@ export default function ClassroomPage() {
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#f3f4f6] dark:bg-[#08090c] text-neutral-900 dark:text-neutral-100 p-2 sm:p-3 md:p-3.5 relative flex flex-col md:flex-row gap-2 sm:gap-3">
 
+
+
       {/* ======================================================== */}
-      {/* MOBILE 2-GRID LAYOUT (< md): TOP VIDEO, BOTTOM LIST      */}
+      {/* 1. SYLLABUS / CURRICULUM PANEL (Bottom on Mobile, Left on Desktop) */}
       {/* ======================================================== */}
-      <div className="flex md:hidden flex-col h-full w-full gap-2.5 overflow-hidden">
-        
-        {/* TOP GRID: Main Video Playing */}
-        <div className="shrink-0 flex flex-col gap-2">
-          {/* Compact Mobile Top Bar */}
-          <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2 min-w-0">
+      <aside
+        style={typeof window !== 'undefined' && window.innerWidth >= 768 ? { width: isLeftSidebarOpen ? `${sidebarWidth}px` : '0px' } : undefined}
+        className={`order-2 md:order-1 rounded-3xl border border-neutral-200/90 dark:border-neutral-800/90 bg-white dark:bg-[#111216] shadow-sm flex flex-col overflow-hidden transition-all duration-150 select-none ${
+          !isLeftSidebarOpen ? 'md:hidden' : 'shrink-0'
+        } ${
+          isMobileListCollapsed ? 'h-auto max-h-[76px] md:h-full md:max-h-none' : 'flex-1 md:flex-none md:h-full'
+        }`}
+      >
+        {/* Syllabus Header */}
+        <div className="p-3 sm:p-3.5 border-b border-neutral-100 dark:border-neutral-800/80 space-y-2 bg-neutral-50/50 dark:bg-neutral-900/40 shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
               <Link
                 href="/dashboard"
-                className="p-1.5 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-500 transition-colors shrink-0"
+                className="hidden md:flex p-1.5 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors"
                 title="Back to Dashboard"
               >
                 <ArrowLeft className="w-4 h-4" />
               </Link>
-              <Logo size="sm" href="/dashboard" />
-              <span className="text-xs font-bold truncate text-neutral-900 dark:text-white max-w-[140px]" title={course.title}>
-                {course.title}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <Layers className="w-4 h-4 text-[#EA4335]" />
+                <span className="font-bold text-xs sm:text-sm text-neutral-900 dark:text-white">Curriculum</span>
+              </div>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] sm:text-[11px] font-mono px-2 py-0.5 rounded-full bg-neutral-200/70 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-semibold">
+                {completedCount}/{totalVideos}
+              </span>
+              
+              {/* Mobile collapse / expand */}
+              <button
+                onClick={() => setIsMobileListCollapsed(!isMobileListCollapsed)}
+                className="md:hidden flex items-center gap-1 text-[11px] font-semibold text-[#EA4335] hover:text-orange-600 p-1 rounded-full transition-colors"
+                title={isMobileListCollapsed ? 'Expand list' : 'Collapse list'}
+              >
+                <span>{isMobileListCollapsed ? 'Expand' : 'Collapse'}</span>
+                {isMobileListCollapsed ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+
+              {/* Desktop collapse */}
+              <button
+                onClick={() => setIsLeftSidebarOpen(false)}
+                className="hidden md:flex p-1.5 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-white transition-colors"
+                title="Collapse Syllabus"
+              >
+                <PanelLeftClose className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Total Progressive Bar */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="text-neutral-500 font-medium">Total Course Progress</span>
+              <span className="font-bold font-mono text-[#EA4335]">{courseProgressPercent}%</span>
+            </div>
+            <div className="w-full h-1.5 sm:h-2 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-red-600 via-[#EA4335] to-orange-500 transition-all duration-300"
+                style={{ width: `${courseProgressPercent}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Filter lessons */}
+          <div className={`relative ${isMobileListCollapsed ? 'hidden md:block' : 'block'}`}>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+            <input
+              type="text"
+              placeholder="Search playlist lessons..."
+              value={playlistSearch}
+              onChange={(e) => setPlaylistSearch(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-full bg-white dark:bg-neutral-850 border border-neutral-200 dark:border-neutral-750 focus:border-[#EA4335] outline-none text-neutral-900 dark:text-white placeholder-neutral-400 transition-colors shadow-2xs"
+            />
+          </div>
+        </div>
+
+        {/* Scrollable Lesson Items */}
+        <div 
+          data-lenis-prevent 
+          className={`flex-1 overflow-y-auto p-2 space-y-1 divide-y divide-neutral-100 dark:divide-neutral-800/50 overscroll-contain ${
+            isMobileListCollapsed ? 'hidden md:block' : 'block'
+          }`}
+          style={{ scrollbarWidth: 'thin' }}
+        >
+          {filteredVideos.map((vid, idx) => renderLessonItem(vid, idx))}
+        </div>
+      </aside>
+
+      {/* Resizer Handle Splitter between Left Grid and Main Grid (Desktop only) */}
+      {isLeftSidebarOpen && (
+        <div
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setIsResizing(true);
+          }}
+          className="hidden md:flex items-center justify-center w-2 hover:w-3 cursor-col-resize group shrink-0 transition-all select-none relative z-20 py-4"
+          title="Drag to resize syllabus"
+        >
+          <div className={`w-1 h-12 rounded-full transition-colors ${
+            isResizing ? 'bg-[#EA4335]' : 'bg-neutral-300 dark:bg-neutral-700 group-hover:bg-[#EA4335]'
+          }`} />
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 2. MAIN SECTION: HEADER + VIDEO PLAYER + CONTROLS        */}
+      {/* ======================================================== */}
+      <section className="order-1 md:order-2 flex-1 h-auto md:h-full min-w-0 rounded-3xl border border-neutral-200/90 dark:border-neutral-800/90 bg-white dark:bg-[#111216] shadow-sm flex flex-col overflow-hidden">
+        
+        {/* Upper Header */}
+        <header className="h-12 sm:h-14 shrink-0 px-3 sm:px-6 border-b border-neutral-100 dark:border-neutral-800/80 bg-neutral-50/50 dark:bg-neutral-900/40 backdrop-blur-sm flex items-center justify-between gap-3">
+          
+          {/* Left: Brand logo & Syllabus toggle if closed */}
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            <Link
+              href="/dashboard"
+              className="md:hidden p-1.5 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-500 transition-colors shrink-0"
+              title="Back to Dashboard"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Link>
+            {!isLeftSidebarOpen && (
+              <button
+                onClick={() => setIsLeftSidebarOpen(true)}
+                className="hidden md:flex p-1.5 rounded-xl border border-neutral-200 dark:border-neutral-750 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 transition-colors shadow-2xs"
+                title="Open Syllabus"
+              >
+                <PanelLeftOpen className="w-4 h-4" />
+              </button>
+            )}
+            <Logo size="sm" href="/dashboard" />
+          </div>
+
+          {/* Center: Course Title & Video Title */}
+          <div className="flex-1 min-w-0 flex items-center justify-center px-1 sm:px-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 max-w-2xl truncate text-center text-xs sm:text-sm">
+              <span className="font-bold text-neutral-900 dark:text-white truncate max-w-[130px] sm:max-w-[220px]" title={course.title}>
+                {course.title}
+              </span>
+              <span className="text-neutral-400 font-bold shrink-0 hidden sm:inline">:</span>
+              <span className="text-neutral-600 dark:text-neutral-300 font-medium truncate max-w-[150px] sm:max-w-[280px] hidden sm:inline" title={activeVideo?.title}>
+                {activeVideo?.title}
+              </span>
+            </div>
+          </div>
+
+          {/* Right: Lesson Prev/Next (Mobile) & Progress + Reset (Desktop) */}
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            {/* Mobile quick prev/next */}
+            <div className="flex md:hidden items-center gap-1">
               <button
                 onClick={() => activeIndex > 0 && setActiveVideoId(course.videos[activeIndex - 1].id)}
                 disabled={activeIndex <= 0}
-                className="p-1.5 rounded-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:border-orange-500 hover:text-[#EA4335] disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-all shadow-2xs"
+                className="p-1.5 rounded-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-all shadow-2xs"
                 title="Previous Lesson"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
@@ -439,351 +585,130 @@ export default function ClassroomPage() {
               <button
                 onClick={() => activeIndex < course.videos.length - 1 && setActiveVideoId(course.videos[activeIndex + 1].id)}
                 disabled={activeIndex >= course.videos.length - 1}
-                className="p-1.5 rounded-full bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 hover:ring-2 hover:ring-orange-500/50 disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-all shadow-2xs"
+                className="p-1.5 rounded-full bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-all shadow-2xs"
                 title="Next Lesson"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
-          </div>
 
-          {/* Centered Main Video Player Card */}
-          <div 
-            className="w-full rounded-2xl overflow-hidden bg-black shadow-md border border-neutral-200/80 dark:border-neutral-800"
-          >
-            <VideoPlayer
-              video={activeVideo}
-              courseVideos={course.videos}
-              onVideoEnd={() => {}}
-              onPreviousVideo={() => activeIndex > 0 && setActiveVideoId(course.videos[activeIndex - 1].id)}
-              onNextVideo={() => activeIndex < course.videos.length - 1 && setActiveVideoId(course.videos[activeIndex + 1].id)}
-              onProgressUpdate={(_vidId, cTime, dTime, isDone) => handleProgress(cTime, dTime, isDone)}
-              onTimeUpdate={(cTime, dTime) => {
-                setCurrentTime(cTime);
-                setDuration(dTime);
-              }}
-              seekToSeconds={seekTarget}
-              onToggleComplete={handleToggleComplete}
-              hasPrevious={activeIndex > 0}
-              hasNext={activeIndex < course.videos.length - 1}
-              autoPlayNext={autoPlayNext}
-              onToggleAutoPlayNext={() => setAutoPlayNext(!autoPlayNext)}
-            />
-          </div>
-        </div>
-
-        {/* BOTTOM GRID: Collapsible List with Total Progressive Bar on Top */}
-        <div className={`flex-1 min-h-0 flex flex-col rounded-3xl border border-neutral-200/90 dark:border-neutral-800/90 bg-white dark:bg-[#111216] shadow-sm overflow-hidden transition-all duration-200 ${
-          isMobileListCollapsed ? 'h-auto max-h-[76px]' : 'flex-1'
-        }`}>
-          
-          {/* Total Progressive Bar on Top of the Bottom Grid */}
-          <div className="p-3 border-b border-neutral-100 dark:border-neutral-800/80 space-y-2 bg-neutral-50/50 dark:bg-neutral-900/40 shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-[#EA4335]" />
-                <span className="font-bold text-xs text-neutral-900 dark:text-white">Curriculum Playlist</span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-neutral-200/70 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-semibold">
-                  {completedCount}/{totalVideos}
-                </span>
-              </div>
-
-              <button
-                onClick={() => setIsMobileListCollapsed(!isMobileListCollapsed)}
-                className="flex items-center gap-1 text-[11px] font-semibold text-[#EA4335] hover:text-orange-600 p-1 rounded-full transition-colors"
-                title={isMobileListCollapsed ? 'Expand list' : 'Collapse list'}
-              >
-                <span>{isMobileListCollapsed ? 'Expand' : 'Collapse'}</span>
-                {isMobileListCollapsed ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-              </button>
+            {/* Desktop progress badge */}
+            <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/60 dark:border-neutral-700/60 text-xs">
+              <span className="text-neutral-500 font-medium">Progress</span>
+              <span className="font-bold text-[#EA4335] font-mono">{courseProgressPercent}%</span>
             </div>
 
-            {/* Total Progressive Bar */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-[10px]">
-                <span className="text-neutral-500 font-medium">Total Course Progress</span>
-                <span className="font-bold font-mono text-[#EA4335]">{courseProgressPercent}%</span>
-              </div>
-              <div className="w-full h-2 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-red-600 via-[#EA4335] to-orange-500 transition-all duration-300"
-                  style={{ width: `${courseProgressPercent}%` }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Search Filter & Scrollable Lessons List when expanded */}
-          {!isMobileListCollapsed && (
-            <>
-              <div className="px-3 pt-2.5 pb-1 shrink-0">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
-                  <input
-                    type="text"
-                    placeholder="Search playlist lessons..."
-                    value={playlistSearch}
-                    onChange={(e) => setPlaylistSearch(e.target.value)}
-                    className="w-full pl-8 pr-3 py-1.5 text-xs rounded-full bg-neutral-100 dark:bg-neutral-850 border border-neutral-200 dark:border-neutral-750 focus:border-[#EA4335] outline-none text-neutral-900 dark:text-white"
-                  />
-                </div>
-              </div>
-
-              <div
-                data-lenis-prevent
-                className="flex-1 overflow-y-auto p-2 space-y-1 divide-y divide-neutral-100 dark:divide-neutral-800/50 overscroll-contain"
-                style={{ scrollbarWidth: 'thin' }}
-              >
-                {filteredVideos.map((vid, idx) => renderLessonItem(vid, idx))}
-              </div>
-            </>
-          )}
-
-        </div>
-
-      </div>
-
-      {/* ======================================================== */}
-      {/* DESKTOP 2-GRID LAYOUT (>= md): SIDE-BY-SIDE              */}
-      {/* ======================================================== */}
-      <div className="hidden md:flex flex-1 min-w-0 h-full gap-2.5 sm:gap-3">
-        
-        {/* DESKTOP GRID 1: Collapsible & Resizable Syllabus */}
-        {isLeftSidebarOpen && (
-          <aside
-            style={{ width: `${sidebarWidth}px` }}
-            className="shrink-0 h-full rounded-3xl border border-neutral-200/90 dark:border-neutral-800/90 bg-white dark:bg-[#111216] shadow-sm flex flex-col overflow-hidden transition-all duration-75 select-none"
-          >
-            {/* Syllabus Header */}
-            <div className="p-3.5 border-b border-neutral-100 dark:border-neutral-800/80 space-y-2.5 bg-neutral-50/50 dark:bg-neutral-900/40">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Link
-                    href="/dashboard"
-                    className="p-1.5 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors"
-                    title="Back to Dashboard"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                  </Link>
-                  <div className="flex items-center gap-1.5">
-                    <Layers className="w-4 h-4 text-[#EA4335]" />
-                    <span className="font-bold text-sm text-neutral-900 dark:text-white">Curriculum</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-neutral-200/70 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-semibold">
-                    {completedCount}/{totalVideos}
-                  </span>
-                  <button
-                    onClick={() => setIsLeftSidebarOpen(false)}
-                    className="p-1.5 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-white transition-colors"
-                    title="Collapse Syllabus"
-                  >
-                    <PanelLeftClose className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Total Progressive Bar on Top of Syllabus */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-[10px]">
-                  <span className="text-neutral-500 font-medium">Total Course Progress</span>
-                  <span className="font-bold font-mono text-[#EA4335]">{courseProgressPercent}%</span>
-                </div>
-                <div className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-red-600 via-[#EA4335] to-orange-500 transition-all duration-300"
-                    style={{ width: `${courseProgressPercent}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Filter lessons */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
-                <input
-                  type="text"
-                  placeholder="Search playlist lessons..."
-                  value={playlistSearch}
-                  onChange={(e) => setPlaylistSearch(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-full bg-white dark:bg-neutral-850 border border-neutral-200 dark:border-neutral-750 focus:border-[#EA4335] outline-none text-neutral-900 dark:text-white placeholder-neutral-400 transition-colors shadow-2xs"
-                />
-              </div>
-            </div>
-
-            {/* Scrollable Lesson Items */}
-            <div 
-              data-lenis-prevent 
-              className="flex-1 overflow-y-auto p-2 space-y-1 divide-y divide-neutral-100 dark:divide-neutral-800/50 overscroll-contain"
-              style={{ scrollbarWidth: 'thin' }}
+            <button
+              onClick={handleResetCourse}
+              className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              title="Reset course progress"
             >
-              {filteredVideos.map((vid, idx) => renderLessonItem(vid, idx))}
-            </div>
-          </aside>
-        )}
-
-        {/* Resizer Handle Splitter between Left Grid and Main Grid */}
-        {isLeftSidebarOpen && (
-          <div
-            onMouseDown={(e) => {
-              e.preventDefault();
-              setIsResizing(true);
-            }}
-            className="flex items-center justify-center w-2 hover:w-3 cursor-col-resize group shrink-0 transition-all select-none relative z-20 py-4"
-            title="Drag to resize syllabus"
-          >
-            <div className={`w-1 h-12 rounded-full transition-colors ${
-              isResizing ? 'bg-[#EA4335]' : 'bg-neutral-300 dark:bg-neutral-700 group-hover:bg-[#EA4335]'
-            }`} />
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
           </div>
-        )}
 
-        {/* DESKTOP GRID 2: Main Video Player & Switcher Controls */}
-        <section className="flex-1 h-full min-w-0 rounded-3xl border border-neutral-200/90 dark:border-neutral-800/90 bg-white dark:bg-[#111216] shadow-sm flex flex-col overflow-hidden">
-          
-          {/* Upper Header: Logo, Course Title : Video Title, Progress */}
-          <header className="h-14 shrink-0 px-4 sm:px-6 border-b border-neutral-100 dark:border-neutral-800/80 bg-neutral-50/50 dark:bg-neutral-900/40 backdrop-blur-sm flex items-center justify-between gap-3">
+        </header>
+
+        {/* Main Video Scrollable Container */}
+        <main 
+          data-lenis-prevent 
+          className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6 space-y-3 sm:space-y-4 overscroll-contain"
+          style={{ scrollbarWidth: 'thin' }}
+        >
+          <div className="w-full max-w-5xl mx-auto space-y-3 sm:space-y-4">
             
-            {/* Left: Brand logo & Syllabus toggle if closed */}
-            <div className="flex items-center gap-2.5 shrink-0">
-              {!isLeftSidebarOpen && (
-                <button
-                  onClick={() => setIsLeftSidebarOpen(true)}
-                  className="p-1.5 rounded-xl border border-neutral-200 dark:border-neutral-750 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 transition-colors shadow-2xs"
-                  title="Open Syllabus"
-                >
-                  <PanelLeftOpen className="w-4 h-4" />
-                </button>
-              )}
-              <Logo size="sm" href="/dashboard" />
-            </div>
-
-            {/* Center: Playlist Name : Video Name */}
-            <div className="flex-1 min-w-0 flex items-center justify-center px-2">
-              <div className="flex items-center gap-2 max-w-2xl truncate text-center text-xs sm:text-sm">
-                <span className="font-bold text-neutral-900 dark:text-white truncate max-w-[220px]" title={course.title}>
-                  {course.title}
-                </span>
-                <span className="text-neutral-400 font-bold shrink-0">:</span>
-                <span className="text-neutral-600 dark:text-neutral-300 font-medium truncate max-w-[280px]" title={activeVideo?.title}>
-                  {activeVideo?.title}
-                </span>
-              </div>
-            </div>
-
-            {/* Right: Progress indicator & Reset */}
-            <div className="flex items-center gap-3 shrink-0">
-              <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/60 dark:border-neutral-700/60 text-xs">
-                <span className="text-neutral-500 font-medium">Progress</span>
-                <span className="font-bold text-[#EA4335] font-mono">{courseProgressPercent}%</span>
-              </div>
-
-              <button
-                onClick={handleResetCourse}
-                className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                title="Reset course progress"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-          </header>
-
-          {/* Main Video Scrollable Container */}
-          <main 
-            data-lenis-prevent 
-            className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 overscroll-contain"
-            style={{ scrollbarWidth: 'thin' }}
-          >
-            <div className="w-full max-w-5xl mx-auto space-y-4">
-              
-              {/* Centered Video Player Card */}
-              <div 
-                className="w-full rounded-3xl overflow-hidden shadow-lg border border-neutral-200/80 dark:border-neutral-800 bg-black"
-              >
-                <VideoPlayer
-                  video={activeVideo}
-                  courseVideos={course.videos}
-                  onVideoEnd={() => {}}
-                  onPreviousVideo={() => activeIndex > 0 && setActiveVideoId(course.videos[activeIndex - 1].id)}
-                  onNextVideo={() => activeIndex < course.videos.length - 1 && setActiveVideoId(course.videos[activeIndex + 1].id)}
-                  onProgressUpdate={(_vidId, cTime, dTime, isDone) => handleProgress(cTime, dTime, isDone)}
-                  onTimeUpdate={(cTime, dTime) => {
+            {/* Centered Single Video Player Card */}
+            <div 
+              className="w-full rounded-2xl md:rounded-3xl overflow-hidden shadow-lg border border-neutral-200/80 dark:border-neutral-800 bg-black"
+              style={{
+                WebkitMaskImage: '-webkit-radial-gradient(white, black)',
+                transform: 'translateZ(0)',
+              }}
+            >
+              <VideoPlayer
+                video={activeVideo}
+                courseVideos={course.videos}
+                onVideoEnd={() => {}}
+                onPreviousVideo={() => activeIndex > 0 && setActiveVideoId(course.videos[activeIndex - 1].id)}
+                onNextVideo={() => activeIndex < course.videos.length - 1 && setActiveVideoId(course.videos[activeIndex + 1].id)}
+                onProgressUpdate={(_vidId, cTime, dTime, isDone) => handleProgress(cTime, dTime, isDone)}
+                onTimeUpdate={(cTime, dTime) => {
+                  currentTimeRef.current = cTime;
+                  durationRef.current = dTime;
+                  if (isAIOpen) {
                     setCurrentTime(cTime);
                     setDuration(dTime);
-                  }}
-                  seekToSeconds={seekTarget}
-                  onToggleComplete={handleToggleComplete}
-                  hasPrevious={activeIndex > 0}
-                  hasNext={activeIndex < course.videos.length - 1}
-                  autoPlayNext={autoPlayNext}
-                  onToggleAutoPlayNext={() => setAutoPlayNext(!autoPlayNext)}
-                />
+                  }
+                }}
+                seekToSeconds={seekTarget}
+                onToggleComplete={handleToggleComplete}
+                hasPrevious={activeIndex > 0}
+                hasNext={activeIndex < course.videos.length - 1}
+                autoPlayNext={autoPlayNext}
+                onToggleAutoPlayNext={() => setAutoPlayNext(!autoPlayNext)}
+              />
+            </div>
+
+            {/* Below Video Info & Action Switcher */}
+            <div className="p-3 sm:p-5 rounded-2xl md:rounded-3xl border border-neutral-200/80 dark:border-neutral-800 bg-neutral-50/40 dark:bg-neutral-900/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-xs text-neutral-400 mb-1">
+                  <span className="font-semibold text-neutral-600 dark:text-neutral-400">Lesson {activeIndex + 1} of {totalVideos}</span>
+                  {activeVideo?.duration && (
+                    <>
+                      <span>•</span>
+                      <span className="font-mono">{activeVideo.duration}</span>
+                    </>
+                  )}
+                  {course.channelTitle && (
+                    <>
+                      <span>•</span>
+                      <span>{course.channelTitle}</span>
+                    </>
+                  )}
+                </div>
+                <h2 className="text-sm sm:text-base md:text-lg font-bold text-neutral-950 dark:text-white leading-tight">
+                  {activeVideo?.title}
+                </h2>
               </div>
 
-              {/* Below Video Info & Action Switcher (Notes and description completely removed) */}
-              <div className="p-4 sm:p-5 rounded-3xl border border-neutral-200/80 dark:border-neutral-800 bg-neutral-50/40 dark:bg-neutral-900/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-xs text-neutral-400 mb-1">
-                    <span className="font-semibold text-neutral-600 dark:text-neutral-400">Lesson {activeIndex + 1} of {totalVideos}</span>
-                    {activeVideo?.duration && (
-                      <>
-                        <span>•</span>
-                        <span className="font-mono">{activeVideo.duration}</span>
-                      </>
-                    )}
-                    {course.channelTitle && (
-                      <>
-                        <span>•</span>
-                        <span>{course.channelTitle}</span>
-                      </>
-                    )}
-                  </div>
-                  <h2 className="text-base sm:text-lg font-bold text-neutral-950 dark:text-white leading-tight">
-                    {activeVideo?.title}
-                  </h2>
-                </div>
+              {/* Previous & Next Lesson Circular Buttons */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => activeIndex > 0 && setActiveVideoId(course.videos[activeIndex - 1].id)}
+                  disabled={activeIndex <= 0}
+                  className={`px-3 sm:px-3.5 py-1.5 rounded-full text-xs font-semibold border flex items-center gap-1.5 transition-all ${
+                    activeIndex > 0
+                      ? 'bg-white hover:bg-neutral-100 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700 hover:border-orange-500 hover:text-[#EA4335] active:scale-95 shadow-2xs'
+                      : 'opacity-30 cursor-not-allowed border-neutral-200 dark:border-neutral-850 text-neutral-400'
+                  }`}
+                  title="Previous Lesson [P]"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Previous</span>
+                </button>
 
-                {/* Previous & Next Lesson Circular Buttons with Orange Accent Hover */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => activeIndex > 0 && setActiveVideoId(course.videos[activeIndex - 1].id)}
-                    disabled={activeIndex <= 0}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border flex items-center gap-1.5 transition-all ${
-                      activeIndex > 0
-                        ? 'bg-white hover:bg-neutral-100 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700 hover:border-orange-500 hover:text-[#EA4335] active:scale-95 shadow-2xs'
-                        : 'opacity-30 cursor-not-allowed border-neutral-200 dark:border-neutral-850 text-neutral-400'
-                    }`}
-                    title="Previous Lesson [P]"
-                  >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                    <span>Previous</span>
-                  </button>
-
-                  <button
-                    onClick={() => activeIndex < course.videos.length - 1 && setActiveVideoId(course.videos[activeIndex + 1].id)}
-                    disabled={activeIndex >= course.videos.length - 1}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border flex items-center gap-1.5 transition-all ${
-                      activeIndex < course.videos.length - 1
-                        ? 'bg-neutral-950 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 border-transparent hover:ring-2 hover:ring-orange-500/50 active:scale-95 shadow-2xs'
-                        : 'opacity-30 cursor-not-allowed border-neutral-200 dark:border-neutral-850 text-neutral-400'
-                    }`}
-                    title="Next Lesson [N]"
-                  >
-                    <span>Next</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
+                <button
+                  onClick={() => activeIndex < course.videos.length - 1 && setActiveVideoId(course.videos[activeIndex + 1].id)}
+                  disabled={activeIndex >= course.videos.length - 1}
+                  className={`px-3 sm:px-3.5 py-1.5 rounded-full text-xs font-semibold border flex items-center gap-1.5 transition-all ${
+                    activeIndex < course.videos.length - 1
+                      ? 'bg-neutral-950 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 border-transparent hover:ring-2 hover:ring-orange-500/50 active:scale-95 shadow-2xs'
+                      : 'opacity-30 cursor-not-allowed border-neutral-200 dark:border-neutral-850 text-neutral-400'
+                  }`}
+                  title="Next Lesson [N]"
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
               </div>
 
             </div>
-          </main>
 
-        </section>
+          </div>
+        </main>
 
-      </div>
+      </section>
 
       {/* ======================================================== */}
       {/* FLOATING & ANIMATED TRANSLUCENT AI TUTOR FAB             */}
@@ -791,7 +716,7 @@ export default function ClassroomPage() {
       <motion.button
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.94 }}
-        onClick={() => setIsAIOpen((prev) => !prev)}
+        onClick={toggleAIOpen}
         className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-white/45 dark:bg-black/50 backdrop-blur-md border border-white/50 dark:border-white/15 shadow-xl hover:shadow-[#EA4335]/30 transition-all flex items-center justify-center p-2.5 group ring-1 ring-white/20 dark:ring-white/10"
         title="Ollama AI Tutor"
       >
